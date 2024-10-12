@@ -1,0 +1,419 @@
+// Save quiz results with exam mode one time
+router.post(
+  "/:userId/:chapterId/results",
+  async (req: Request, res: Response) => {
+    const { userId, chapterId } = req.params;
+    const {
+      quiz_mode,
+      results_by_chapter,
+      correct_answers_count,
+      incorrect_answers_count,
+      to_fill_user_answer,
+      total_time_spent,
+      answer_by_learn_mode,
+      learn_correct_answers_count,
+      learn_incorrect_answers_count,
+      exam_correct_answers_count,
+      exam_incorrect_answers_count,
+      answer_by_exam_mode,
+    } = req.body;
+    console.log("BODY: ", req.body);
+    try {
+      const userIdObj = new mongoose.Types.ObjectId(userId);
+      const chapterIdObj = new mongoose.Types.ObjectId(chapterId);
+      const quiz = new Quiz({
+        chapters_ref: results_by_chapter.map(
+          (result: { chapter_ref: string }) =>
+            new mongoose.Types.ObjectId(result.chapter_ref)
+        ),
+        user_ref: userIdObj,
+        quiz_mode,
+        total_time_spent: "00:00:00",
+        results_by_chapter_ref: [],
+        date: new Date(),
+        correct_answers_count,
+        incorrect_answers_count,
+        to_fill_user_answer,
+        answer_by_learn_mode,
+        learn_correct_answers_count,
+        learn_incorrect_answers_count,
+        exam_correct_answers_count,
+        exam_incorrect_answers_count,
+        answer_by_exam_mode,
+        is_exam_mode: answer_by_exam_mode === "exam" ? true : false,
+      });
+
+      let totalTimeSpent = 0;
+      const questionDocs: IResultsByQuestion[] = [];
+      const chapterResultsPromises = results_by_chapter.map(
+        async (result: { chapter_ref: string; results_by_question: any[] }) => {
+          const chapterIdObj = new mongoose.Types.ObjectId(result.chapter_ref);
+          const chapter = await Chapter.findById(chapterIdObj);
+          if (!chapter) {
+            throw new Error("Chapter not found");
+          }
+
+          let resultsByChapter = await ResultsByChapter.findOne({
+            chapter_ref: chapterIdObj,
+            quiz_ref: {
+              $in: await Quiz.find({ user_ref: userIdObj }).distinct("_id"),
+            },
+          });
+
+          if (!resultsByChapter) {
+            resultsByChapter = new ResultsByChapter({
+              quiz_ref: quiz._id,
+              chapter_ref: chapterIdObj,
+              questions_done: "0%",
+              results_by_question_ref: [],
+              user_ref: userId,
+            });
+          }
+
+          let isCorrectCount = 0;
+          let isNotCorrectCount = 0;
+          let notAnsweredYetCount = 0;
+
+          for (const questionResult of result.results_by_question) {
+            let {
+              question_ref,
+              is_correct,
+              is_not_correct,
+              time_spent_per_question,
+              to_fill_user_answer,
+              // These fields will be retained if not provided in the request body
+              is_learn_correct_answers,
+              is_learn_incorrect_answers,
+              learn_not_answered_yet,
+              is_exam_correct_answers,
+              is_exam_incorrect_answers,
+              exam_fill_user_answer, // Extract exam_fill_user_answer here
+              exam_not_answered_yet,
+              done_by_mode,
+            } = questionResult;
+
+            console.log("Entering in the for loop!");
+
+            const questionRefObj = new mongoose.Types.ObjectId(question_ref);
+
+            is_correct = is_correct || false;
+            is_not_correct = is_not_correct || false;
+            let not_answered_yet = !is_correct && !is_not_correct;
+
+            if (answer_by_exam_mode === "exam") {
+              console.log("Question done by ", answer_by_exam_mode);
+              // Default values
+              is_exam_correct_answers = is_exam_correct_answers || false;
+              is_exam_incorrect_answers = is_exam_incorrect_answers || false;
+
+              // New condition: if both exam correct and incorrect are false,
+              // but exam_fill_user_answer is present, set exam_not_answered_yet to true
+              if (
+                // !is_exam_correct_answers &&
+                // !is_exam_incorrect_answers &&
+                exam_fill_user_answer
+              ) {
+                console.log(
+                  "Setting exam_not_answered_yet to true due to no correct/incorrect answers but fill_user_answer is present."
+                );
+                exam_not_answered_yet = true;
+                is_exam_correct_answers = false;
+                is_exam_incorrect_answers = false;
+              }
+            }
+
+            // Fetch the existing question result if it exists
+            let resultsByQuestion = await ResultsByQuestion.findOne({
+              results_by_chapter_ref: resultsByChapter._id,
+              question_ref: questionRefObj,
+            });
+
+            if (resultsByQuestion) {
+              console.log("Found results by question");
+              // Retain previous values for learn-related fields if not provided in the request
+              // Always update exam-related fields if the mode is exam
+              // Check if exam_fill_user_answer exists and update accordingly
+              if (exam_fill_user_answer) {
+                resultsByQuestion.exam_fill_user_answer = exam_fill_user_answer;
+                resultsByQuestion.exam_not_answered_yet = true;
+              } else if (answer_by_exam_mode === "exam") {
+                // If no exam_fill_user_answer, proceed with normal correct/incorrect update
+                resultsByQuestion.is_exam_correct_answers =
+                  is_exam_correct_answers;
+                resultsByQuestion.is_exam_incorrect_answers =
+                  is_exam_incorrect_answers;
+                resultsByQuestion.exam_not_answered_yet = exam_not_answered_yet;
+                resultsByQuestion.done_by_mode = quiz_mode;
+              }
+              if (
+                (answer_by_learn_mode && learn_correct_answers_count > 0) ||
+                learn_incorrect_answers_count > 0
+              ) {
+                // ** ISSUE NOT FOUND HERE
+                console.log("ARE WE UPDATING THIS STEP 1");
+                is_learn_correct_answers =
+                  resultsByQuestion.is_learn_correct_answers;
+                is_learn_incorrect_answers =
+                  resultsByQuestion.is_learn_incorrect_answers;
+                learn_not_answered_yet =
+                  resultsByQuestion.learn_not_answered_yet;
+              }
+            } else {
+              console.log("updating the fields learn");
+              // Set default values if there is no existing result
+              is_learn_correct_answers = is_learn_correct_answers || false;
+              is_learn_incorrect_answers = is_learn_incorrect_answers || false;
+              learn_not_answered_yet =
+                !is_learn_correct_answers && !is_learn_incorrect_answers;
+
+              is_exam_correct_answers = is_exam_correct_answers || false;
+              is_exam_incorrect_answers = is_exam_incorrect_answers || false;
+              exam_not_answered_yet =
+                !is_exam_correct_answers && !is_exam_incorrect_answers;
+            }
+            if (
+              // !is_exam_correct_answers &&
+              // !is_exam_incorrect_answers &&
+              exam_fill_user_answer
+            ) {
+              console.log(
+                "Setting exam_not_answered_yet to true due to no correct/incorrect answers but fill_user_answer is present."
+              );
+              exam_not_answered_yet = true;
+              is_exam_correct_answers = false;
+              is_exam_incorrect_answers = false;
+            }
+            // Handle transitions based on correct/incorrect answers
+            if (
+              is_not_correct &&
+              answer_by_learn_mode === "learn" &&
+              (learn_correct_answers_count > 0 ||
+                learn_incorrect_answers_count > 0)
+            ) {
+              is_learn_incorrect_answers = true;
+              is_learn_correct_answers = false; // Make sure correct is false
+              learn_not_answered_yet = false; // Mark it as answered
+            } else if (
+              is_correct &&
+              answer_by_learn_mode === "learn" &&
+              (learn_correct_answers_count > 0 ||
+                learn_incorrect_answers_count > 0)
+            ) {
+              is_learn_correct_answers = true;
+              is_learn_incorrect_answers = false;
+              learn_not_answered_yet = false;
+            }
+
+            if (
+              answer_by_exam_mode === "exam" &&
+              exam_incorrect_answers_count > 0 &&
+              !exam_fill_user_answer
+            ) {
+              is_exam_incorrect_answers = true;
+              is_exam_correct_answers = false; // Make sure correct is false
+              exam_not_answered_yet = false; // Mark it as answered
+              done_by_mode = quiz_mode;
+            } else if (
+              answer_by_exam_mode === "exam" &&
+              exam_correct_answers_count > 0 &&
+              !exam_fill_user_answer
+            ) {
+              is_exam_correct_answers = true;
+              is_exam_incorrect_answers = false;
+              exam_not_answered_yet = false;
+              done_by_mode = quiz_mode;
+            }
+
+            const timeSpentSeconds = parseFloat(time_spent_per_question);
+            const formattedTime = formatSecondsToHHMMSS(timeSpentSeconds);
+            totalTimeSpent += not_answered_yet ? 0 : timeSpentSeconds;
+
+            if (!resultsByQuestion) {
+              // Create new resultsByQuestion if it doesn't exist
+              console.log("Creating new resultsByQuestion");
+              resultsByQuestion = new ResultsByQuestion({
+                results_by_chapter_ref: resultsByChapter._id,
+                question_ref: questionRefObj,
+                is_correct,
+                is_not_correct,
+                not_answered_yet,
+                to_fill_user_answer,
+                time_spent_per_question: not_answered_yet
+                  ? "00:00:00"
+                  : formattedTime,
+                done_by_mode: !not_answered_yet ? quiz_mode : undefined,
+                is_learn_correct_answers,
+                is_learn_incorrect_answers,
+                learn_not_answered_yet,
+                answer_by_learn_mode,
+                is_exam_correct_answers, // Only set if exam_fill_user_answer is not present
+                is_exam_incorrect_answers, // Only set if exam_fill_user_answer is not present
+                exam_not_answered_yet, // Set to true if exam_fill_user_answer is present
+                answer_by_exam_mode,
+                exam_fill_user_answer:
+                  answer_by_exam_mode === "exam"
+                    ? exam_fill_user_answer
+                    : undefined, // Set exam_fill_user_answer conditionally
+              });
+            } else {
+              if (resultsByQuestion.is_correct) {
+                if (!is_correct && is_not_correct) {
+                  console.log("Incorrect answer update");
+                  // Transitioning from correct to incorrect
+                  resultsByQuestion.is_correct = false;
+                  resultsByQuestion.is_not_correct = true;
+                  resultsByQuestion.not_answered_yet = false;
+                  if (
+                    answer_by_learn_mode === "learn" &&
+                    (learn_correct_answers_count > 0 ||
+                      learn_incorrect_answers_count > 0)
+                  ) {
+                    resultsByQuestion.is_learn_correct_answers = false;
+                    resultsByQuestion.is_learn_incorrect_answers = true;
+                    resultsByQuestion.learn_not_answered_yet = false;
+                  }
+                  if (
+                    answer_by_exam_mode === "exam" &&
+                    (exam_correct_answers_count > 0 ||
+                      exam_incorrect_answers_count > 0)
+                  ) {
+                    resultsByQuestion.is_exam_correct_answers = false;
+                    resultsByQuestion.is_exam_incorrect_answers = true;
+                    // Save exam_fill_user_answer if in exam mode
+                    resultsByQuestion.exam_fill_user_answer =
+                      exam_fill_user_answer;
+                  }
+                  resultsByQuestion.time_spent_per_question = formattedTime;
+                  resultsByQuestion.done_by_mode = quiz_mode;
+                }
+              } else if (resultsByQuestion.is_not_correct) {
+                if (is_correct && !is_not_correct) {
+                  console.log("Correct answer update");
+                  // Transitioning from incorrect to correct
+                  resultsByQuestion.is_correct = true;
+                  resultsByQuestion.is_not_correct = false;
+                  resultsByQuestion.not_answered_yet = false;
+                  if (
+                    answer_by_learn_mode === "learn" &&
+                    (learn_correct_answers_count > 0 ||
+                      learn_incorrect_answers_count > 0)
+                  ) {
+                    resultsByQuestion.is_learn_correct_answers = true;
+                    resultsByQuestion.is_learn_incorrect_answers = false;
+                    resultsByQuestion.learn_not_answered_yet = false;
+                  }
+                  if (
+                    answer_by_exam_mode === "exam" &&
+                    (exam_correct_answers_count > 0 ||
+                      exam_incorrect_answers_count > 0)
+                  ) {
+                    resultsByQuestion.is_exam_correct_answers = true;
+                    resultsByQuestion.is_exam_incorrect_answers = false;
+                    // Save exam_fill_user_answer if in exam mode
+                    resultsByQuestion.exam_fill_user_answer =
+                      exam_fill_user_answer;
+                  }
+                  resultsByQuestion.time_spent_per_question = formattedTime;
+                  resultsByQuestion.done_by_mode = quiz_mode;
+                }
+              } else {
+                // Updating if previously unanswered or newly answered
+                resultsByQuestion.is_correct = is_correct;
+                resultsByQuestion.is_not_correct = is_not_correct;
+                resultsByQuestion.not_answered_yet = not_answered_yet;
+                if (
+                  (answer_by_learn_mode && learn_correct_answers_count > 0) ||
+                  learn_incorrect_answers_count > 0
+                ) {
+                  // ** ISSUE NOT FOUND HERE
+                  console.log("ARE WE UPDATING THIS STEP 2");
+                  resultsByQuestion.is_learn_correct_answers =
+                    is_learn_correct_answers;
+                  resultsByQuestion.is_learn_incorrect_answers =
+                    is_learn_incorrect_answers;
+                  resultsByQuestion.learn_not_answered_yet =
+                    learn_not_answered_yet;
+                }
+                if (
+                  (answer_by_exam_mode && exam_correct_answers_count > 0) ||
+                  exam_incorrect_answers_count > 0
+                ) {
+                  resultsByQuestion.is_exam_correct_answers =
+                    is_exam_correct_answers;
+                  resultsByQuestion.is_exam_incorrect_answers =
+                    is_exam_incorrect_answers;
+                  resultsByQuestion.exam_not_answered_yet =
+                    exam_not_answered_yet;
+                  // Save exam_fill_user_answer if in exam mode
+                  if (answer_by_exam_mode === "exam") {
+                    resultsByQuestion.exam_fill_user_answer =
+                      exam_fill_user_answer;
+                  }
+                }
+                resultsByQuestion.time_spent_per_question = not_answered_yet
+                  ? "00:00:00"
+                  : formattedTime;
+                resultsByQuestion.done_by_mode = !not_answered_yet
+                  ? quiz_mode
+                  : undefined;
+              }
+            }
+
+            await resultsByQuestion.save();
+            questionDocs.push(resultsByQuestion);
+
+            if (resultsByQuestion.is_correct) isCorrectCount++;
+            if (resultsByQuestion.is_not_correct) isNotCorrectCount++;
+            if (resultsByQuestion.not_answered_yet) notAnsweredYetCount++;
+
+            if (
+              !resultsByChapter.results_by_question_ref.includes(
+                resultsByQuestion._id as mongoose.Types.ObjectId &
+                  IResultsByQuestion
+              )
+            ) {
+              resultsByChapter.results_by_question_ref.push(
+                resultsByQuestion._id as mongoose.Types.ObjectId &
+                  IResultsByQuestion
+              );
+            }
+          }
+
+          const totalQuestionsInChapter =
+            isCorrectCount + isNotCorrectCount + notAnsweredYetCount;
+          const totalDone = isCorrectCount + isNotCorrectCount;
+
+          resultsByChapter.questions_done =
+            totalQuestionsInChapter === 0
+              ? "0%"
+              : `${Math.round((totalDone / totalQuestionsInChapter) * 100)}%`;
+
+          await resultsByChapter.save();
+          return resultsByChapter;
+        }
+      );
+
+      const resultsByChapters = await Promise.all(chapterResultsPromises);
+      quiz.results_by_chapter_ref = resultsByChapters.map(
+        (chapterResult) => chapterResult._id
+      );
+      quiz.total_time_spent = total_time_spent;
+      await quiz.save();
+
+      await User.findByIdAndUpdate(
+        userIdObj,
+        { $push: { quizzes_ref: quiz._id } },
+        { new: true, useFindAndModify: false }
+      );
+
+      res.status(201).json({
+        quiz,
+        resultsByChapter: resultsByChapters,
+        resultsByQuestion: questionDocs,
+      });
+    } catch (error) {
+      console.error("Error saving quiz results:", error);
+      res.status(500).json({ message: "Failed to save quiz results" });
+    }
+  }
+);

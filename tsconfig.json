@@ -1,0 +1,16 @@
+{
+  "compilerOptions": {
+    "target": "ES6",
+    "module": "commonjs",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "outDir": "./dist",
+    "rootDir": "./", 
+    "lib": ["es6", "dom"],
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node", "ws", "express", "socket.io"],
+  },
+  "include": ["**/*.ts"], 
+  "exclude": ["node_modules"]
+}
