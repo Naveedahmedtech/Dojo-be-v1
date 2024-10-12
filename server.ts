@@ -94,7 +94,7 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 
-const PORT = process.env.PORT || 3005;
+const PORT = process.env.PORT || 3005; 
 
 
 const server = app.listen(PORT, () => {
