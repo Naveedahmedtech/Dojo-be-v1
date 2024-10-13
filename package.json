@@ -6,13 +6,17 @@
   "scripts": {
     "start": "node dist/server.js",
     "start:dev": "nodemon --exec npx ts-node server.ts",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "build": "rimraf dist && tsc",
     "ts.check": "tsc --project tsconfig.json",
     "add-build": "git add dist",
-    "pre-commit": "npm run ts.check && npm run build && npm run add-build",
     "postinstall": "tsc"
   },
+  "pre-commit": [
+    "ts.check",
+    "build",
+    "add-build"
+  ],
   "keywords": [],
   "author": "",
   "license": "ISC",
