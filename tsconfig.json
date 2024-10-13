@@ -6,11 +6,11 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "outDir": "./dist",
-    "rootDir": "./", 
+    "rootDir": "./",
     "lib": ["es6", "dom"],
     "forceConsistentCasingInFileNames": true,
-    "types": ["node", "ws", "express", "socket.io"],
+    "types": ["node", "ws", "express", "socket.io"]
   },
-  "include": ["**/*.ts"], 
-  "exclude": ["node_modules"]
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules", "dist"]
 }
