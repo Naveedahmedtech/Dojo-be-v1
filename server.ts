@@ -72,16 +72,16 @@ mongoose.connect(process.env.MONGO_URI as string)
         console.error('Error connecting to MongoDB:', err.message);
     });
 
-app.use('/auth', authRoutes);
-app.use('/add', addDataRoutes);
-app.use('/delete', deleteDataRoutes);
-app.use('/getall', getAllDataRoutes);
-app.use('/getspecific', getSpecificDataRoutes);
-app.use('/search', searchRoutes);
-app.use('/user', userRoutes);
-app.use('/quiz', quizRoutes);
-app.use('/teacher', teacherRoutes);
-app.use('/admin', adminRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/add', addDataRoutes);
+app.use('/api/delete', deleteDataRoutes);
+app.use('/api/getall', getAllDataRoutes);
+app.use('/api/getspecific', getSpecificDataRoutes);
+app.use('/api/search', searchRoutes);
+app.use('/api/user', userRoutes);
+app.use('/api/quiz', quizRoutes);
+app.use('/api/teacher', teacherRoutes);
+app.use('/api/admin', adminRoutes);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);

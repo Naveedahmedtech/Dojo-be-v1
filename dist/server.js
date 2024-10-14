@@ -78,16 +78,16 @@ mongoose_1.default.connect(process.env.MONGO_URI)
     .catch((err) => {
     console.error('Error connecting to MongoDB:', err.message);
 });
-app.use('/auth', authRoutes_1.default);
-app.use('/add', addDataRoutes_1.default);
-app.use('/delete', deleteDataRoutes_1.default);
-app.use('/getall', getAllDataRoutes_1.default);
-app.use('/getspecific', getSpecificDataRoutes_1.default);
-app.use('/search', searchRoutes_1.default);
-app.use('/user', userRoutes_1.default);
-app.use('/quiz', quizRoutes_1.default);
-app.use('/teacher', teacherRoutes_1.default);
-app.use('/admin', adminRoutes_1.default);
+app.use('/api/auth', authRoutes_1.default);
+app.use('/api/add', addDataRoutes_1.default);
+app.use('/api/delete', deleteDataRoutes_1.default);
+app.use('/api/getall', getAllDataRoutes_1.default);
+app.use('/api/getspecific', getSpecificDataRoutes_1.default);
+app.use('/api/search', searchRoutes_1.default);
+app.use('/api/user', userRoutes_1.default);
+app.use('/api/quiz', quizRoutes_1.default);
+app.use('/api/teacher', teacherRoutes_1.default);
+app.use('/api/admin', adminRoutes_1.default);
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Oops! Something unexpected happened. Please try again later.');
