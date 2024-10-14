@@ -54,7 +54,7 @@ app.post('/upload-image-url', async (req: Request, res: Response) => {
   }
 });
 
-const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', process.env.FE_API];
+const allowedOrigins = ['http://localhost:5173', 'http://localhost:5174', 'https://dojo-be-v1.vercel.app', process.env.FE_API];
 app.use(cors({
     origin: function (origin, callback) {
         if (!origin || allowedOrigins.includes(origin)) {
