@@ -34,6 +34,7 @@ const userRoutes_1 = __importDefault(require("./routes/userRoutes"));
 const quizRoutes_1 = __importDefault(require("./routes/quizRoutes"));
 const teacherRoutes_1 = __importDefault(require("./routes/teacherRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
+const testing_1 = __importDefault(require("./routes/testing"));
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: false }));
@@ -78,6 +79,7 @@ mongoose_1.default.connect(process.env.MONGO_URI)
     .catch((err) => {
     console.error('Error connecting to MongoDB:', err.message);
 });
+app.use("/api/testing", testing_1.default);
 app.use('/api/auth', authRoutes_1.default);
 app.use('/api/add', addDataRoutes_1.default);
 app.use('/api/delete', deleteDataRoutes_1.default);

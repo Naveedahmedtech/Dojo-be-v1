@@ -23,6 +23,7 @@ import userRoutes from './routes/userRoutes';
 import quizRoutes from './routes/quizRoutes';
 import teacherRoutes from './routes/teacherRoutes';
 import adminRoutes from './routes/adminRoutes';
+import testing1 from "./routes/testing";
 
 const app = express();
 app.use(express.json());
@@ -72,6 +73,8 @@ mongoose.connect(process.env.MONGO_URI as string)
         console.error('Error connecting to MongoDB:', err.message);
     });
 
+
+app.use("/api/testing", testing1);
 app.use('/api/auth', authRoutes);
 app.use('/api/add', addDataRoutes);
 app.use('/api/delete', deleteDataRoutes);
