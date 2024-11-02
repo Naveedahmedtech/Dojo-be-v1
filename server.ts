@@ -24,6 +24,7 @@ import quizRoutes from './routes/quizRoutes';
 import teacherRoutes from './routes/teacherRoutes';
 import adminRoutes from './routes/adminRoutes';
 import testing1 from "./routes/testing";
+import { createFeedback, getFeedbackByCategory } from "./controllers/feedbackController";
 
 const app = express();
 app.use(express.json());
@@ -57,7 +58,7 @@ app.post('/upload-image-url', async (req: Request, res: Response) => {
 const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:5174",
-  "https://dojo-v1.netlify.app/",
+  "https://dojo-v1.netlify.app",
   process.env.FE_API,
 ];
 app.use(cors({
@@ -90,6 +91,8 @@ app.use('/api/user', userRoutes);
 app.use('/api/quiz', quizRoutes);
 app.use('/api/teacher', teacherRoutes);
 app.use('/api/admin', adminRoutes);
+app.use("/api/feedback/create", createFeedback);
+app.use("/api/feedback/get/:category", getFeedbackByCategory);
 
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err.stack);

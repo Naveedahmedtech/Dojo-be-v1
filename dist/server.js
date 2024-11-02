@@ -35,6 +35,7 @@ const quizRoutes_1 = __importDefault(require("./routes/quizRoutes"));
 const teacherRoutes_1 = __importDefault(require("./routes/teacherRoutes"));
 const adminRoutes_1 = __importDefault(require("./routes/adminRoutes"));
 const testing_1 = __importDefault(require("./routes/testing"));
+const feedbackController_1 = require("./controllers/feedbackController");
 const app = (0, express_1.default)();
 app.use(express_1.default.json());
 app.use(express_1.default.urlencoded({ extended: false }));
@@ -64,7 +65,7 @@ app.post('/upload-image-url', (req, res) => __awaiter(void 0, void 0, void 0, fu
 const allowedOrigins = [
     "http://localhost:5173",
     "http://localhost:5174",
-    "https://dojo-v1.netlify.app/",
+    "https://dojo-v1.netlify.app",
     process.env.FE_API,
 ];
 app.use((0, cors_1.default)({
@@ -95,6 +96,8 @@ app.use('/api/user', userRoutes_1.default);
 app.use('/api/quiz', quizRoutes_1.default);
 app.use('/api/teacher', teacherRoutes_1.default);
 app.use('/api/admin', adminRoutes_1.default);
+app.use("/api/feedback/create", feedbackController_1.createFeedback);
+app.use("/api/feedback/get/:category", feedbackController_1.getFeedbackByCategory);
 app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Oops! Something unexpected happened. Please try again later.');
